@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Real Time Bus Tracker</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <link href="styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="map-overlay top">
+      <button onClick="run()">Show buses</button>
+    </div>
+
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaGV5aXRzZXJpZSIsImEiOiJja3lkNWJjcjgwcGt2MnZwaXMwbzRva3hjIn0.v50ySe0ztEtw81qzXaa8YQ";
+
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/navigation-night-v1",
+        center: [-71.104081, 42.365554],
+        zoom: 14,
+      });
+
+      var marker = new mapboxgl.Marker()
+        .setLngLat([-71.092761, 42.357575])
+        .addTo(map);
+
+      async function getBusLocations() {
+        const url =
+          "https://api-v3.mbta.com/vehicles?filter[route]=1&include=trip";
+        const response = await fetch(url);
+        const json = await response.json();
+        return json.data;
+      }
+
+      let currentMarkers = [];
+
+      async function run() {
+        const locations = await getBusLocations();
+
+        for (let bus of locations) {
+          var newMarker = new mapboxgl.Marker({ color: "pink" })
+            .setLngLat([bus.attributes.longitude, bus.attributes.latitude])
+            .addTo(map);
+          currentMarkers.push(newMarker);
+        }
+
+        setTimeout(run, 2300);
+
+        setTimeout(removeMarkers, 2300);
+      }
+
+      function removeMarkers() {
+        if (currentMarkers !== null) {
+          for (var i = currentMarkers.length - 1; i >= 0; i--) {
+            currentMarkers[i].remove();
+          }
+        }
+      }
+
+      map.on("load", () => {
+        map.addSource("places", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Route 1: SNACKS </strong><p>Little Donkey | small plates and cocktails | (617) 945-1008 </p>",
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [-71.101556, 42.3643284],
+                },
+              },
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Route 1: SNACKS </strong><p>Wayfair | Seafood, absinth and more | (617) 864-2300</p>",
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [-71.1123053, 42.369434],
+                },
+              },
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Route 1: SNACKS </strong><p> The Dumpling House | Dumplings and Chinese Favorites | (617) 661-8066 </p>",
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [-71.1098463, 42.3687019],
+                },
+              },
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Route 1: SNACKS  </strong><p> Miracle of Science Bar + Grill (617) 868-2866 </p>",
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [-71.102761, 42.3644374],
+                },
+              },
+            ],
+          },
+        });
+        map.addLayer({
+          id: "places",
+          type: "circle",
+          source: "places",
+          paint: {
+            "circle-color": "purple",
+            "circle-radius": 6,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+
+        const popup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
+
+        map.on("mouseenter", "places", (e) => {
+          map.getCanvas().style.cursor = "pointer";
+
+          const coordinates = e.features[0].geometry.coordinates.slice();
+          const description = e.features[0].properties.description;
+
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+
+          popup.setLngLat(coordinates).setHTML(description).addTo(map);
+        });
+
+        map.on("mouseleave", "places", () => {
+          map.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+      });
+    </script>
+  </body>
+</html>
